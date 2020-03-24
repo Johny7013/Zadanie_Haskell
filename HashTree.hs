@@ -84,7 +84,7 @@ buildProof a t
     foundProofs = merklePaths a t
 
 merklePaths :: Hashable a => a -> Tree a -> [MerklePath]
-merklePaths a t = reverse (auxMerklePaths (hash a) t [] [])
+merklePaths a t = auxMerklePaths (hash a) t [] []
 
 -- Aux
 auxMerklePaths :: Hash -> Tree a -> MerklePath -> [MerklePath] -> [MerklePath]
@@ -93,11 +93,8 @@ auxMerklePaths aHash (Leaf h _) currentPath acc
   | otherwise = acc
 auxMerklePaths aHash (NodeOne h t) currentPath acc =
   auxMerklePaths aHash t ((Left $ treeHash t):currentPath) acc
-  -- -| t == (Leaf childHash _) = auxMerklePaths aHash t ((Left childHash):currentPath) acc
-  -- -| t == (NodeOne childHash _) = auxMerklePaths aHash t ((Left childHash):currentPath) acc
-  -- -| t == (NodeTwo childHash _ _) = auxMerklePaths aHash t ((Left childHash):currentPath) acc
 auxMerklePaths aHash (NodeTwo h tl tr) currentPath acc =
-  auxMerklePaths aHash tr currentPathR (auxMerklePaths aHash tl currentPathL acc)
+  auxMerklePaths aHash tl currentPathL (auxMerklePaths aHash tr currentPathR acc)
   where
     tlHash = treeHash tl
     trHash = treeHash tr
