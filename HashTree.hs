@@ -5,6 +5,12 @@ module HashTree
   , buildTree
   , treeHash
   , drawTree
+  , buildProof
+  , merklePaths
+  , verifyProof
+  , showMerklePath
+  , MerklePath
+  , MerkleProof
   ) where
 import Hashable32
 import Utils
@@ -28,6 +34,7 @@ twig t = NodeOne (combine tHash tHash) t
 
 buildTree :: Hashable a => [a] -> Tree a
 buildTree [] = errorEmptyList "buildTree"
+buildTree (a:[]) = Leaf (hash a) a
 buildTree l = auxBuildTree (map leaf l) []
 
 treeHash :: Tree a -> Hash
