@@ -11,13 +11,12 @@ module HashTree
   , showMerklePath
   , MerklePath
   , MerkleProof
+  , Tree
   ) where
 import Hashable32
 import Utils
 
 -- A
-
--- type Node_type = Char
 
 data Tree a =  Leaf Hash a | NodeOne Hash (Tree a) | NodeTwo Hash (Tree a) (Tree a)
 
@@ -45,15 +44,14 @@ treeHash (NodeTwo h _ _) = h
 drawTree :: Show a => Tree a -> String
 drawTree t = auxDrawTree t ""
 
--- Aux functions
+-- A auxiliary functions
 auxBuildTree :: Hashable a => [Tree a] -> [Tree a] -> Tree a
-auxBuildTree (t1:t2:tTail) acc = auxBuildTree tTail ((node t1 t2):acc)
-auxBuildTree (t:tTail) acc = auxBuildTree tTail ((twig t):acc)
 auxBuildTree [] acc
   | length acc == 1 = head acc
   | otherwise = auxBuildTree (reverse acc) []
+auxBuildTree (t:[]) acc = auxBuildTree [] ((twig t):acc)
+auxBuildTree (t1:t2:tTail) acc = auxBuildTree tTail ((node t1 t2):acc)
 
--- TODO just do it faster than O(n^2)
 auxDrawTree :: Show a => Tree a -> String -> String
 auxDrawTree (Leaf h a) indent = indent ++ showHash h ++ " " ++ show a ++ "\n"
 auxDrawTree (NodeOne h t) indent =
@@ -83,7 +81,6 @@ data MerkleProof a = MerkleProof a MerklePath
 instance Show a => Show (MerkleProof a) where
     showsPrec d (MerkleProof a merklePath) = showParen (d>0) $
       showString ("MerkleProof " ++ (parentheseType a) ++ " " ++ showMerklePath merklePath)
-    -- show (MerkleProof a merklePath) = "(MerkleProof " ++ show a ++ " " ++ showMerklePath merklePath ++ ")"
 
 buildProof :: Hashable a => a -> Tree a -> Maybe (MerkleProof a)
 buildProof a t
@@ -95,7 +92,7 @@ buildProof a t
 merklePaths :: Hashable a => a -> Tree a -> [MerklePath]
 merklePaths a t = auxMerklePaths (hash a) t [] []
 
--- Aux
+-- B auxiliary functions
 auxMerklePaths :: Hash -> Tree a -> MerklePath -> [MerklePath] -> [MerklePath]
 auxMerklePaths aHash (Leaf h _) currentPath acc
   | aHash == h = (reverse currentPath):acc
@@ -113,21 +110,17 @@ auxMerklePaths aHash (NodeTwo h tl tr) currentPath acc =
 showMerklePath :: MerklePath -> String
 showMerklePath merklePath = foldr f "" merklePath
   where
-    f = (\a acc ->
-          case a of
-            (Left h) -> ("<" ++ (showHash h)) ++ acc
-            (Right h) -> (">" ++ (showHash h)) ++ acc
-        )
+    f :: (Either Hash Hash) -> String -> String
+    f (Left h) acc = ("<" ++ (showHash h)) ++ acc
+    f (Right h) acc = (">" ++ (showHash h)) ++ acc
+
 
 verifyProof :: Hashable a => Hash -> MerkleProof a -> Bool
-verifyProof h (MerkleProof a merklePath) =
-  h == foldr f (hash a) merklePath
+verifyProof h (MerkleProof a merklePath) = h == foldr f (hash a) merklePath
   where
-    f = (\a acc ->
-          case a of
-            (Left h) -> combine acc h
-            (Right h) -> combine h acc
-        )
+    f :: (Either Hash Hash) -> Hash -> Hash
+    f (Left h) acc = combine acc h
+    f (Right h) acc = combine h acc
 
 parentheseType :: Show a => a -> String
 parentheseType a

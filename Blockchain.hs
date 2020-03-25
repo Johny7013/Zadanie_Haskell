@@ -55,9 +55,11 @@ tx1 = Tx
 type Miner = Address
 type Nonce = Word32
 
+-- C
+
 -- TODO fix 3 wheres
 mineBlock :: Miner -> Hash -> [Transaction] -> Block
-mineBlock miner parent txs = Block { blockHdr = blockHeader, blockTxs = txs}
+mineBlock miner parent txs = do Block { blockHdr = blockHeader, blockTxs = txs}
   where
     blockHeader = generateBlockHeaderWithMatchingNonce conBlockHeaderFromNonce [(minBound::Hash)..(maxBound::Hash)]
       where
@@ -65,8 +67,10 @@ mineBlock miner parent txs = Block { blockHdr = blockHeader, blockTxs = txs}
           where
             cbTx = coinbaseTx miner
 
+-- mineBlock auxiliary functions
 generateBlockHeaderWithMatchingNonce :: (Hash -> BlockHeader) -> [Hash] -> BlockHeader
-generateBlockHeaderWithMatchingNonce conBlockHeader hashRange = head $ filter validNonce (map conBlockHeader hashRange)
+generateBlockHeaderWithMatchingNonce conBlockHeader hashRange =
+  head $ filter validNonce (map conBlockHeader hashRange)
 
 genesis = block0
 block0 = mineBlock (hash "Satoshi") 0 []
@@ -87,12 +91,10 @@ validChain blocks = isJust $ verifyChain blocks
 verifyChain :: [Block] -> Maybe Hash
 verifyChain [] = Nothing
 verifyChain (b:[]) = Just $ hash b
-verifyChain (b1:b2:t) =
-  let res = verifyChain (b2:t) in
-    if (isJust $ verifyBlock b1 (hash b2)) && (isJust $ res)
-      then Just $ hash b1
-      else Nothing
--- verifyChain blockChain = auxVerifyChain blockChain
+verifyChain (b1:b2:t) = do
+  guard(isJust $ verifyBlock b1 (hash b2))
+  guard(isJust $ verifyChain (b2:t))
+  return (hash b1)
 
 verifyBlock :: Block -> Hash -> Maybe Hash
 verifyBlock b@(Block hdr txs) parentHash = do
@@ -100,15 +102,6 @@ verifyBlock b@(Block hdr txs) parentHash = do
   guard (txroot hdr == treeHash (buildTree (coinbase hdr:txs)))
   guard (validNonce hdr)
   return (hash b)
-
---Aux
--- auxVerifyChain :: [Block] -> Maybe Hash
--- auxVerifyChain (b:[]) = Just $ hash b
--- auxVerifyChain (b1:b2:t) =
---   let res = auxVerifyChain (b2:t) in
---     if (isJust $ verifyBlock b1 (hash b2)) && (isJust $ res)
---       then Just $ hash b1
---       else Nothing
 
 {- | Transaction Receipts
 >>> let charlie = hash "Charlie"
@@ -124,6 +117,8 @@ TxReceipt {txrBlock = 230597504, txrProof = MerkleProof (Tx {txFrom = 2030195168
 True
 -}
 
+-- D
+
 data TransactionReceipt = TxReceipt
   {  txrBlock :: Hash, txrProof :: MerkleProof Transaction } deriving Show
 
@@ -138,6 +133,17 @@ mineTransactions miner parent txs = (block, genTransactionReceipts block merkleP
     merkleProofs = map getValueFromMaybe (map ($ tree) (map buildProof txs))
       where
         tree = buildTree $ (coinbaseTx miner):txs
+
+-- D auxiliary Functions
+genTransactionReceipts :: Block -> [MerkleProof Transaction] -> [TransactionReceipt]
+genTransactionReceipts b proofsList = map (genTransactionReceipt $ hash b) proofsList
+
+genTransactionReceipt :: Hash -> MerkleProof Transaction -> TransactionReceipt
+genTransactionReceipt h proof = TxReceipt {txrBlock = h, txrProof = proof}
+
+getValueFromMaybe :: Maybe a -> a
+getValueFromMaybe (Just a) = a
+getValueFromMaybe Nothing = errorNoValue "getValueFromMaybe"
 
 {- | Pretty printing
 >>> runShows $ pprBlock block2
@@ -203,17 +209,6 @@ pprTx tx@(Tx from to amount)
 
 pprTxs :: [Transaction] -> ShowS
 pprTxs = pprV . map pprTx
-
--- Aux
-genTransactionReceipts :: Block -> [MerkleProof Transaction] -> [TransactionReceipt]
-genTransactionReceipts b proofsList = map (genTransactionReceipt $ hash b) proofsList
-
-genTransactionReceipt :: Hash -> MerkleProof Transaction -> TransactionReceipt
-genTransactionReceipt h proof = TxReceipt {txrBlock = h, txrProof = proof}
-
-getValueFromMaybe :: Maybe a -> a
-getValueFromMaybe (Just a) = a
-getValueFromMaybe Nothing = errorNoValue "getValueFromMaybe"
 
 -- Errors
 
