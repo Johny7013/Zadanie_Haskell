@@ -123,11 +123,14 @@ verifyProof h (MerkleProof a merklePath) = h == foldr f (hash a) merklePath
     f (Right h) acc = combine h acc
 
 parentheseType :: Show a => a -> String
-parentheseType a
-  | numberOfWords > 1 = "(" ++ show a ++ ")"
-  | otherwise = show a
-  where
-    numberOfWords = length $ words $ show a
+parentheseType a =
+  let aShow = show a
+      numberOfWords = length $ words $ aShow
+      result
+        | numberOfWords > 1 = "(" ++ aShow ++ ")"
+        | otherwise = aShow
+  in
+    result
 
 -- | B test
 -- >>> mapM_ print $ map showMerklePath $ merklePaths 'i' $ buildTree "bitcoin"

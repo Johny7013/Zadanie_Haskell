@@ -57,15 +57,12 @@ type Nonce = Word32
 
 -- C
 
--- TODO fix 3 wheres
 mineBlock :: Miner -> Hash -> [Transaction] -> Block
-mineBlock miner parent txs = do Block { blockHdr = blockHeader, blockTxs = txs}
-  where
-    blockHeader = generateBlockHeaderWithMatchingNonce conBlockHeaderFromNonce [(minBound::Hash)..(maxBound::Hash)]
-      where
-        conBlockHeaderFromNonce = BlockHeader parent cbTx (treeHash $ buildTree (cbTx:txs))
-          where
-            cbTx = coinbaseTx miner
+mineBlock miner parent txs =
+  let cbTx = coinbaseTx miner in
+  let conBlockHeaderFromNonce = BlockHeader parent cbTx (treeHash $ buildTree (cbTx:txs)) in
+  let bHeader = generateBlockHeaderWithMatchingNonce conBlockHeaderFromNonce [(minBound::Hash)..(maxBound::Hash)] in
+  Block { blockHdr = bHeader, blockTxs = txs}
 
 -- mineBlock auxiliary functions
 generateBlockHeaderWithMatchingNonce :: (Hash -> BlockHeader) -> [Hash] -> BlockHeader
@@ -127,12 +124,12 @@ validateReceipt r hdr = txrBlock r == hash hdr
                         && verifyProof (txroot hdr) (txrProof r)
 
 mineTransactions :: Miner -> Hash -> [Transaction] -> (Block, [TransactionReceipt])
-mineTransactions miner parent txs = (block, genTransactionReceipts block merkleProofs)
-  where
-    block = mineBlock miner parent txs
-    merkleProofs = map getValueFromMaybe (map ($ tree) (map buildProof txs))
-      where
-        tree = buildTree $ (coinbaseTx miner):txs
+mineTransactions miner parent txs =
+  let tree = buildTree $ (coinbaseTx miner):txs in
+  let merkleProofs = map getValueFromMaybe $ map ($ tree) (map buildProof txs) in
+  let block = mineBlock miner parent txs
+      transactionReceipts = genTransactionReceipts block merkleProofs in
+  (block, transactionReceipts)
 
 -- D auxiliary Functions
 genTransactionReceipts :: Block -> [MerkleProof Transaction] -> [TransactionReceipt]
