@@ -1,3 +1,4 @@
+-- Student: Jan Klinkosz, student id number: 394 342
 module PPrint where
 import Data.List (intersperse)
 

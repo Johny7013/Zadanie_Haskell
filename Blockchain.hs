@@ -1,3 +1,4 @@
+-- Student: Jan Klinkosz, student id number: 394 342
 module Blockchain where
 import Control.Monad
 import Data.Word
