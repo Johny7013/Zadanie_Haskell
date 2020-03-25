@@ -12,10 +12,10 @@ pprV = intercalateS $ showString "\n"
 pprH = intercalateS $ showString " "
 
 intercalateS :: ShowS -> [ShowS] -> ShowS
-intercalateS sep list = pprListWith id $ Data.List.intersperse sep list
+intercalateS sep list = foldr (.) id $ Data.List.intersperse sep list
 
 pprListWith :: (a -> ShowS) -> [a] -> ShowS
-pprListWith f list = foldr (.) id (map f list)
+pprListWith f list = pprV (map f list)
 
 runShows :: ShowS -> IO ()
 runShows = putStrLn . ($"")
