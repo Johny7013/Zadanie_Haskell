@@ -81,7 +81,9 @@ type MerklePath = [Either Hash Hash]
 data MerkleProof a = MerkleProof a MerklePath
 
 instance Show a => Show (MerkleProof a) where
-    show (MerkleProof a merklePath) = "(MerkleProof " ++ show a ++ " " ++ showMerklePath merklePath ++ ")"
+    showsPrec d (MerkleProof a merklePath) = showParen (d>0) $
+      showString ("MerkleProof " ++ (parentheseType a) ++ " " ++ showMerklePath merklePath)
+    -- show (MerkleProof a merklePath) = "(MerkleProof " ++ show a ++ " " ++ showMerklePath merklePath ++ ")"
 
 buildProof :: Hashable a => a -> Tree a -> Maybe (MerkleProof a)
 buildProof a t
@@ -126,6 +128,13 @@ verifyProof h (MerkleProof a merklePath) =
             (Left h) -> combine acc h
             (Right h) -> combine h acc
         )
+
+parentheseType :: Show a => a -> String
+parentheseType a
+  | numberOfWords > 1 = "(" ++ show a ++ ")"
+  | otherwise = show a
+  where
+    numberOfWords = length $ words $ show a
 
 -- | B test
 -- >>> mapM_ print $ map showMerklePath $ merklePaths 'i' $ buildTree "bitcoin"

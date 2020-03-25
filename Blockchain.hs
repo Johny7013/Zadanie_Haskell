@@ -65,8 +65,6 @@ mineBlock miner parent txs = Block { blockHdr = blockHeader, blockTxs = txs}
           where
             cbTx = coinbaseTx miner
 
--- [(minBound::Hash)..(maxBound::Hash)]
-
 generateBlockHeaderWithMatchingNonce :: (Hash -> BlockHeader) -> [Hash] -> BlockHeader
 generateBlockHeaderWithMatchingNonce conBlockHeader hashRange = head $ filter validNonce (map conBlockHeader hashRange)
 
@@ -134,7 +132,12 @@ validateReceipt r hdr = txrBlock r == hash hdr
                         && verifyProof (txroot hdr) (txrProof r)
 
 mineTransactions :: Miner -> Hash -> [Transaction] -> (Block, [TransactionReceipt])
-mineTransactions miner parent txs = undefined
+mineTransactions miner parent txs = (block, genTransactionReceipts block merkleProofs)
+  where
+    block = mineBlock miner parent txs
+    merkleProofs = map getValueFromMaybe (map ($ tree) (map buildProof txs))
+      where
+        tree = buildTree $ (coinbaseTx miner):txs
 
 {- | Pretty printing
 >>> runShows $ pprBlock block2
@@ -200,3 +203,23 @@ pprTx tx@(Tx from to amount)
 
 pprTxs :: [Transaction] -> ShowS
 pprTxs = pprV . map pprTx
+
+-- Aux
+genTransactionReceipts :: Block -> [MerkleProof Transaction] -> [TransactionReceipt]
+genTransactionReceipts b proofsList = map (genTransactionReceipt $ hash b) proofsList
+
+genTransactionReceipt :: Hash -> MerkleProof Transaction -> TransactionReceipt
+genTransactionReceipt h proof = TxReceipt {txrBlock = h, txrProof = proof}
+
+getValueFromMaybe :: Maybe a -> a
+getValueFromMaybe (Just a) = a
+getValueFromMaybe Nothing = errorNoValue "getValueFromMaybe"
+
+-- Errors
+
+errorNoValue :: String -> a
+errorNoValue fun =
+  errorWithoutStackTrace (prel_list_str ++ fun ++ ": canoot get value from Nothing")
+
+prel_list_str :: String
+prel_list_str = "Blockchain."
