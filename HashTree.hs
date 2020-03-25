@@ -90,17 +90,33 @@ buildProof a t
     foundProofs = merklePaths a t
 
 merklePaths :: Hashable a => a -> Tree a -> [MerklePath]
-merklePaths a t = auxMerklePaths (hash a) t [] []
+merklePaths a t = auxMerklePaths (hash a) t []
 
 -- B auxiliary functions
-auxMerklePaths :: Hash -> Tree a -> MerklePath -> [MerklePath] -> [MerklePath]
-auxMerklePaths aHash (Leaf h _) currentPath acc
+-- Lazy version
+auxMerklePaths :: Hash -> Tree a -> MerklePath -> [MerklePath]
+auxMerklePaths aHash (Leaf h _) currentPath
+  | aHash == h = [reverse currentPath]
+  | otherwise = []
+auxMerklePaths aHash (NodeOne h t) currentPath =
+  auxMerklePaths aHash t ((Left $ treeHash t):currentPath)
+auxMerklePaths aHash (NodeTwo h tl tr) currentPath =
+  auxMerklePaths aHash tl currentPathL ++ auxMerklePaths aHash tr currentPathR
+  where
+    tlHash = treeHash tl
+    trHash = treeHash tr
+    currentPathR = (Right tlHash):currentPath
+    currentPathL = (Left trHash):currentPath
+
+-- not lazy version of auxMerklePaths (not used in the solution)
+auxMerklePaths' :: Hash -> Tree a -> MerklePath -> [MerklePath] -> [MerklePath]
+auxMerklePaths' aHash (Leaf h _) currentPath acc
   | aHash == h = (reverse currentPath):acc
   | otherwise = acc
-auxMerklePaths aHash (NodeOne h t) currentPath acc =
-  auxMerklePaths aHash t ((Left $ treeHash t):currentPath) acc
-auxMerklePaths aHash (NodeTwo h tl tr) currentPath acc =
-  auxMerklePaths aHash tl currentPathL (auxMerklePaths aHash tr currentPathR acc)
+auxMerklePaths' aHash (NodeOne h t) currentPath acc =
+  auxMerklePaths' aHash t ((Left $ treeHash t):currentPath) acc
+auxMerklePaths' aHash (NodeTwo h tl tr) currentPath acc =
+  auxMerklePaths' aHash tl currentPathL (auxMerklePaths' aHash tr currentPathR acc)
   where
     tlHash = treeHash tl
     trHash = treeHash tr
